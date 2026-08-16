@@ -151,12 +151,10 @@ function handleSkinSelection(skin, clickedButton) {
 
     clickedButton.classList.add("correct");
 
-    // Desativa os outros botões
+    // Desativa todos os botões
     const allButtons = skinOptionsContainerElement.querySelectorAll(".skin-option-btn");
     allButtons.forEach(btn => {
-        if (btn !== clickedButton) {
-            btn.disabled = true;
-        }
+        btn.disabled = true;
     });
 
     // Celebração de vitória com confetes e áudio
@@ -249,8 +247,6 @@ function confirmChampionToday(validGuess) {
 
 function handleCorrectAttempt(modeAtAttempt, attemptCard) {
     attemptCard.classList.add("correct");
-
-    playCorrectAudio();
 
     if (modeAtAttempt === GameMode.CHAMPION) {
         switchMode(GameMode.SKIN);
