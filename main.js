@@ -147,8 +147,14 @@ function handleSkinSelection(skin, clickedButton) {
         }
     });
 
-    // Celebração de vitória com confetes
+    // Celebração de vitória com confetes e áudio
     triggerConfetti();
+    try {
+        correctAudio.currentTime = 0;
+        correctAudio.play();
+    } catch (e) {
+        console.log(e);
+    }
 
     try {
         userData.champions ??= [];
@@ -226,6 +232,13 @@ function confirmChampionToday(validGuess) {
 
 function handleCorrectAttempt(modeAtAttempt, attemptCard) {
     attemptCard.classList.add("correct");
+
+    try {
+        correctAudio.currentTime = 0;
+        correctAudio.play();
+    } catch (e) {
+        console.log(e);
+    }
 
     if (modeAtAttempt === GameMode.CHAMPION) {
         switchMode(GameMode.SKIN);
