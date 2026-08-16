@@ -53,8 +53,8 @@ function preloadImage(url) {
     });
 }
 
+// TODO: ZOOM SEMPRE SER NA DIRETA E VARIAR ENTRE BAIXO E CIMA
 function generateZoomOrigin() {
-    // Zoom sempre na direita (80% a 95%) e variando dinamicamente entre cima e baixo (15% a 85%)
     const xPercent = Math.floor(Math.random() * 15 + 80);
     const yPercent = Math.floor(Math.random() * 70 + 15);
     return `${xPercent}% ${yPercent}%`;
@@ -206,6 +206,14 @@ async function loadNextChampion() {
     hideLoading();
 }
 
+/**
+ * TODO
+ * Arquiteturar esse metodo e a logica de autocomplete para ser orientado ao modo que o usuário está.
+ * Exemplo: se o usuário está no modo de acertar o campeão, a logica desse método vai comparar o champion today id / name. Se for no modo skin
+ * a logica do método vai comparar com o champion today skin name.
+ * 
+ * Mesmo fluxo para o auto complete do usuário.
+ */
 function confirmChampionToday(validGuess) {
     const rawGuess = inputChampionIdElement.value.trim();
     const guess = validGuess || modeHandler.validateGuess(rawGuess);

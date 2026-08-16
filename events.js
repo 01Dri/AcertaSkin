@@ -72,6 +72,7 @@ export function setupEvents({
             e.preventDefault();
 
             const selectedGuess = resolveEnterGuess(items, currentHandler, inputChampionIdElement);
+            inputChampionIdElement.value = "";
             toggleClearButton();
             if (!selectedGuess) return;
 
@@ -99,8 +100,7 @@ function resolveEnterGuess(items, handler, inputElement) {
     if (items.length > 0) {
         const targetIndex = (activeIndex >= 0 && activeIndex < items.length) ? activeIndex : 0;
         const item = items[targetIndex];
-        inputElement.value = item.dataset.label;
-        return item.dataset.value;
+        return item.dataset.value || item.dataset.label;
     }
 
     const rawText = inputElement.value.trim();
@@ -138,7 +138,8 @@ function renderAutoComplete(query, items, container, inputElement, onConfirm, to
 function createAutoCompleteItem(itemData, inputElement, container, onConfirm, toggleClearButton) {
     const item = document.createElement("div");
     item.classList.add("autocomplete-item");
-    item.dataset.value = itemData.name || itemData.label || itemData.id;
+    const selectedValue = itemData.name || itemData.label || itemData.id;
+    item.dataset.value = selectedValue;
     item.dataset.label = itemData.label;
 
     if (itemData.iconUrl) {
@@ -153,9 +154,15 @@ function createAutoCompleteItem(itemData, inputElement, container, onConfirm, to
     nameSpan.textContent = itemData.label;
     item.appendChild(nameSpan);
 
-    item.addEventListener("click", () => {
-        selectItem(itemData, inputElement, container, onConfirm, toggleClearButton);
-    });
+    const handleSelection = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        selectItem(selectedValue, inputElement, container, onConfirm, toggleClearButton);
+    };
+
+    item.addEventListener("mousedown", handleSelection);
+    item.addEventListener("touchstart", handleSelection, { passive: false });
+    item.addEventListener("click", handleSelection);
 
     return item;
 }
@@ -170,8 +177,7 @@ function updateActiveItem(items) {
     });
 }
 
-function selectItem(itemData, inputElement, container, onConfirm, toggleClearButton) {
-    const selectedValue = itemData.name || itemData.label || itemData.id;
+function selectItem(selectedValue, inputElement, container, onConfirm, toggleClearButton) {
     inputElement.value = "";
     closeAutoComplete(container);
     toggleClearButton?.();
