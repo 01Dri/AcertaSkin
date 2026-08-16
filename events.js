@@ -17,7 +17,7 @@ export function setupEvents({
         inputChampionIdElement.placeholder = handler.placeholder;
     }
 
-    confirmChampionButtonElement.addEventListener("click", () => {
+    confirmChampionButtonElement?.addEventListener("click", () => {
         const currentHandler = getCurrentHandler();
         const rawValue = inputChampionIdElement.value.trim();
         const validGuess = currentHandler.validateGuess(rawValue);
@@ -36,7 +36,7 @@ export function setupEvents({
         inputChampionIdElement.focus();
     });
 
-    inputChampionIdElement.addEventListener("input", (e) => {
+    inputChampionIdElement?.addEventListener("input", (e) => {
         const currentHandler = getCurrentHandler();
         const value = e.target.value.trim().toLowerCase();
 
@@ -45,7 +45,7 @@ export function setupEvents({
         renderAutoComplete(value, availableItems, autoCompleteContainerElement, inputChampionIdElement, onConfirm, toggleClearButton);
     });
 
-    inputChampionIdElement.addEventListener("keydown", (e) => {
+    inputChampionIdElement?.addEventListener("keydown", (e) => {
         const currentHandler = getCurrentHandler();
         const items = autoCompleteContainerElement.querySelectorAll(".autocomplete-item");
 
@@ -82,7 +82,7 @@ export function setupEvents({
     });
 
     document.addEventListener("click", (e) => {
-        const isClickInside = inputChampionIdElement.contains(e.target) || autoCompleteContainerElement.contains(e.target);
+        const isClickInside = inputChampionIdElement?.contains(e.target) || autoCompleteContainerElement?.contains(e.target);
         if (isClickInside) return;
 
         closeAutoComplete(autoCompleteContainerElement);
@@ -154,15 +154,15 @@ function createAutoCompleteItem(itemData, inputElement, container, onConfirm, to
     nameSpan.textContent = itemData.label;
     item.appendChild(nameSpan);
 
-    const handleSelection = (e) => {
+    item.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+    });
+
+    item.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();
         selectItem(selectedValue, inputElement, container, onConfirm, toggleClearButton);
-    };
-
-    item.addEventListener("mousedown", handleSelection);
-    item.addEventListener("touchstart", handleSelection, { passive: false });
-    item.addEventListener("click", handleSelection);
+    });
 
     return item;
 }

@@ -7,6 +7,7 @@ import { triggerConfetti } from "./confetti.js";
 
 // Constants
 const ZOOM_LEVELS = [4.0, 3.8, 3.6, 3.4, 3.2, 3.0, 2.8, 2.6, 2.4, 2.2, 2.0, 1.8, 1.6, 1.4, 1.2, 1.0];
+const correctAudio = typeof Audio !== "undefined" ? new Audio("./assets/acertou.mp3") : null;
 
 // DOM Elements
 const splashArtImage = document.getElementById("championSplash");
@@ -42,6 +43,17 @@ function showLoading(message = "Carregando campeão...") {
 
 function hideLoading() {
     splashLoadingElement?.classList.add("hidden");
+}
+
+function playCorrectAudio() {
+    try {
+        if (correctAudio) {
+            correctAudio.currentTime = 0;
+            correctAudio.play().catch(e => console.log("Audio play prevented:", e));
+        }
+    } catch (e) {
+        console.log(e);
+    }
 }
 
 function preloadImage(url) {
@@ -149,12 +161,7 @@ function handleSkinSelection(skin, clickedButton) {
 
     // Celebração de vitória com confetes e áudio
     triggerConfetti();
-    try {
-        correctAudio.currentTime = 0;
-        correctAudio.play();
-    } catch (e) {
-        console.log(e);
-    }
+    playCorrectAudio();
 
     try {
         userData.champions ??= [];
@@ -216,7 +223,9 @@ async function loadNextChampion() {
  */
 function confirmChampionToday(validGuess) {
     const rawGuess = inputChampionIdElement.value.trim();
-    const guess = validGuess || modeHandler.validateGuess(rawGuess);
+    const guess = (typeof validGuess === "string" && validGuess.length > 0)
+        ? validGuess
+        : modeHandler.validateGuess(rawGuess);
     if (!guess) return;
 
     const isCorrect = modeHandler.isCorrect(guess);
@@ -241,12 +250,7 @@ function confirmChampionToday(validGuess) {
 function handleCorrectAttempt(modeAtAttempt, attemptCard) {
     attemptCard.classList.add("correct");
 
-    try {
-        correctAudio.currentTime = 0;
-        correctAudio.play();
-    } catch (e) {
-        console.log(e);
-    }
+    playCorrectAudio();
 
     if (modeAtAttempt === GameMode.CHAMPION) {
         switchMode(GameMode.SKIN);
