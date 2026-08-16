@@ -42,7 +42,7 @@ export function setupEvents({
 
         toggleClearButton();
         const availableItems = typeof currentHandler.getItems === "function" ? currentHandler.getItems() : currentHandler.items;
-        renderAutoComplete(value, availableItems, autoCompleteContainerElement, inputChampionIdElement);
+        renderAutoComplete(value, availableItems, autoCompleteContainerElement, inputChampionIdElement, onConfirm, toggleClearButton);
     });
 
     inputChampionIdElement.addEventListener("keydown", (e) => {
@@ -107,7 +107,7 @@ function resolveEnterGuess(items, handler, inputElement) {
     return handler.validateGuess(rawText);
 }
 
-function renderAutoComplete(query, items, container, inputElement) {
+function renderAutoComplete(query, items, container, inputElement, onConfirm, toggleClearButton) {
     container.innerHTML = "";
     activeIndex = -1;
 
@@ -128,14 +128,14 @@ function renderAutoComplete(query, items, container, inputElement) {
     }
 
     filtered.forEach(itemData => {
-        const item = createAutoCompleteItem(itemData, inputElement, container);
+        const item = createAutoCompleteItem(itemData, inputElement, container, onConfirm, toggleClearButton);
         container.appendChild(item);
     });
 
     container.classList.add("active");
 }
 
-function createAutoCompleteItem(itemData, inputElement, container) {
+function createAutoCompleteItem(itemData, inputElement, container, onConfirm, toggleClearButton) {
     const item = document.createElement("div");
     item.classList.add("autocomplete-item");
     item.dataset.value = itemData.name || itemData.label || itemData.id;
@@ -154,9 +154,7 @@ function createAutoCompleteItem(itemData, inputElement, container) {
     item.appendChild(nameSpan);
 
     item.addEventListener("click", () => {
-        selectItem(itemData, inputElement, container);
-        const clearBtn = document.getElementById("clear-input-button");
-        clearBtn?.classList.add("active");
+        selectItem(itemData, inputElement, container, onConfirm, toggleClearButton);
     });
 
     return item;
@@ -172,9 +170,12 @@ function updateActiveItem(items) {
     });
 }
 
-function selectItem(itemData, inputElement, container) {
-    inputElement.value = itemData.label;
+function selectItem(itemData, inputElement, container, onConfirm, toggleClearButton) {
+    const selectedValue = itemData.name || itemData.label || itemData.id;
+    inputElement.value = "";
     closeAutoComplete(container);
+    toggleClearButton?.();
+    onConfirm?.(selectedValue);
 }
 
 function closeAutoComplete(container) {
