@@ -21,7 +21,7 @@ export async function loadChampions() {
         }
     }
 
-    return uniqueChampions;
+    return shuffle(uniqueChampions);
 }
 
 export async function loadChampionSkins(championId) {
@@ -51,4 +51,16 @@ async function getData(url) {
 async function getLatestLolVersion() {
     const versions = await getData("https://ddragon.leagueoflegends.com/api/versions.json");
     return versions[0];
+}
+
+function shuffle(array) {
+    const result = [...array];
+
+    for (let i = result.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+
+        [result[i], result[j]] = [result[j], result[i]];
+    }
+
+    return result;
 }

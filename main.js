@@ -4,7 +4,22 @@ import { setupEvents } from "./events.js";
 import { GameMode } from "./types.js";
 import { createGameModeHandler } from "./gameMode.js";
 import { triggerConfetti } from "./confetti.js";
+import { use } from "react";
 
+
+/**
+ * MELHORIAS:
+ * 
+ * - DEPOIS QUE ACERTAR TODAS, RESETAR
+ * 
+ * 
+ * NOVOS MODOS TELA NOVA:
+ * 
+ * - MODO PIXEL: CONFORME ERRA, O NÚMERO DE PIXEL VAI AUMENTANDO
+ *  CONCEITO NOVA TELA: AO ACESSAR, O USUÁRIO VAI PODER ESCOLHER QUAL MODO JOGOAR (DEFAULT, PIXEL). 
+ *  O estado do usuário é individual por tela, ou seja, seus acertos são referentes ao modo.
+ * 
+ */
 // Constants
 const ZOOM_LEVELS = [4.0, 3.8, 3.6, 3.4, 3.2, 3.0, 2.8, 2.6, 2.4, 2.2, 2.0, 1.8, 1.6, 1.4, 1.2, 1.0];
 const correctAudio = typeof Audio !== "undefined" ? new Audio("./assets/acertou.mp3") : null;
@@ -336,12 +351,15 @@ async function getChampionToday() {
 
     const available = champions.filter(champ => !usedIds.includes(champ.id) && !usedIds.includes(champ.name));
     if (available.length === 0) {
-        return getRandomItem(champions);
+        resetUserState();
     }
 
     return getRandomItem(available);
 }
-
+function resetUserState() {
+    delete userData.champion;
+    saveData(userData);
+}
 function getRandomItem(list) {
     return list[Math.floor(Math.random() * list.length)];
 }
