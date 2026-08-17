@@ -4,7 +4,6 @@ import { setupEvents } from "./events.js";
 import { GameMode } from "./types.js";
 import { createGameModeHandler } from "./gameMode.js";
 import { triggerConfetti } from "./confetti.js";
-import { use } from "react";
 
 
 /**
@@ -363,7 +362,6 @@ function resetUserState() {
 function getRandomItem(list) {
     return list[Math.floor(Math.random() * list.length)];
 }
-
 // Inicialização Principal da Aplicação
 async function init() {
     try {
