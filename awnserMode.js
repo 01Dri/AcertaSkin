@@ -1,9 +1,9 @@
-import { GameMode } from "./types.js";
+import { AnswerMode } from "./types.js";
 import { buildChampionSpriteImage } from "./champions.js";
 
-export function createGameModeHandler(mode, { champions = [], championToday = null, getExcludedItems = () => [] }) {
+export function createAwnserModeHandler(mode, { champions = [], championToday = null, getExcludedItems = () => [] }) {
     switch (mode) {
-        case GameMode.SKIN: {
+        case AnswerMode.SKIN: {
             const skins = championToday?.allSkins || [];
             const championDisplayName = championToday?.name || championToday?.id || "";
 
@@ -24,7 +24,7 @@ export function createGameModeHandler(mode, { champions = [], championToday = nu
             };
 
             return {
-                mode: GameMode.SKIN,
+                mode: AnswerMode.SKIN,
                 placeholder: "Digite o nome da skin",
                 items: allItems,
                 getItems: getFilteredItems,
@@ -59,7 +59,7 @@ export function createGameModeHandler(mode, { champions = [], championToday = nu
             };
         }
 
-        case GameMode.CHAMPION:
+        case AnswerMode.CHAMPION:
         default: {
             const allItems = champions.map(champ => ({
                 id: champ.id,
@@ -77,7 +77,7 @@ export function createGameModeHandler(mode, { champions = [], championToday = nu
             };
 
             return {
-                mode: GameMode.CHAMPION,
+                mode: AnswerMode.CHAMPION,
                 placeholder: "Digite o nome do campeão",
                 items: allItems,
                 getItems: getFilteredItems,
@@ -119,3 +119,5 @@ export function createGameModeHandler(mode, { champions = [], championToday = nu
         }
     }
 }
+
+export const createAnswerModeHandler = createAwnserModeHandler;

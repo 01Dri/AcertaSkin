@@ -5,6 +5,14 @@ export const ChampionStatus = {
 };
 
 export const GameMode = {
+    DEFAULT: "default",
+    PIXEL: "pixel"
+};
+
+export const AnswerMode = {
     CHAMPION: "champion",
     SKIN: "skin"
 };
+
+// Aliases de compatibilidade
+export const AwnserMode = AnswerMode;

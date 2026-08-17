@@ -5,11 +5,14 @@ export function setupEvents({
     inputChampionIdElement,
     clearInputButtonElement,
     autoCompleteContainerElement,
+    getAnswerModeHandler,
+    getAwnserModeHandler,
     getModeHandler,
     onConfirm
 }) {
+    const handlerGetter = getAnswerModeHandler || getAwnserModeHandler || getModeHandler;
     const getCurrentHandler = () => {
-        return typeof getModeHandler === "function" ? getModeHandler() : getModeHandler;
+        return typeof handlerGetter === "function" ? handlerGetter() : handlerGetter;
     };
 
     const handler = getCurrentHandler();

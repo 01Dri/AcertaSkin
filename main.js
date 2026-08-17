@@ -1,24 +1,10 @@
 import { saveData, getData } from "./user.js";
 import { buildChampionSplashArtImage, loadChampions, loadChampionSkins } from "./champions.js";
 import { setupEvents } from "./events.js";
-import { GameMode } from "./types.js";
-import { createGameModeHandler } from "./gameMode.js";
+import { AnswerMode, GameMode } from "./types.js";
+import { createAwnserModeHandler } from "./awnserMode.js";
 import { triggerConfetti } from "./confetti.js";
 
-
-/**
- * MELHORIAS:
- * 
- * - DEPOIS QUE ACERTAR TODAS, RESETAR
- * 
- * 
- * NOVOS MODOS TELA NOVA:
- * 
- * - MODO PIXEL: CONFORME ERRA, O NÚMERO DE PIXEL VAI AUMENTANDO
- *  CONCEITO NOVA TELA: AO ACESSAR, O USUÁRIO VAI PODER ESCOLHER QUAL MODO JOGOAR (DEFAULT, PIXEL). 
- *  O estado do usuário é individual por tela, ou seja, seus acertos são referentes ao modo.
- * 
- */
 // Constants
 const ZOOM_LEVELS = [4.0, 3.8, 3.6, 3.4, 3.2, 3.0, 2.8, 2.6, 2.4, 2.2, 2.0, 1.8, 1.6, 1.4, 1.2, 1.0];
 const correctAudio = typeof Audio !== "undefined" ? new Audio("./assets/acertou.mp3") : null;
@@ -42,8 +28,9 @@ const skinOptionsContainerElement = document.getElementById("skin-options-contai
 let userData = getData();
 let champions = [];
 let championToday = null;
-let currentMode = userData.currentMode || GameMode.CHAMPION;
-let modeHandler = null;
+let currentAnswerMode = userData.currentAnswerMode || AnswerMode.CHAMPION;
+let answerModeHandler = null;
+let userGameMode = userData .currentUserMode || GameMode.DEFAULT;
 
 function showLoading(message = "Carregando campeão...") {
     if (!splashLoadingElement) return;
@@ -79,7 +66,6 @@ function preloadImage(url) {
     });
 }
 
-// TODO: ZOOM SEMPRE SER NA DIRETA E VARIAR ENTRE BAIXO E CIMA
 function generateZoomOrigin() {
     const xPercent = Math.floor(Math.random() * 15 + 80);
     const yPercent = Math.floor(Math.random() * 70 + 15);
@@ -92,7 +78,7 @@ function getExcludedAttempts() {
 }
 
 function updateSplashZoom() {
-    if (currentMode === GameMode.SKIN) {
+    if (currentAnswerMode === AnswerMode.SKIN) {
         splashArtImage.style.transform = "scale(1)";
         return;
     }
@@ -102,18 +88,18 @@ function updateSplashZoom() {
     splashArtImage.style.transform = `scale(${ZOOM_LEVELS[zoomIndex]})`;
 }
 
-function switchMode(newMode) {
-    currentMode = newMode;
-    userData.currentMode = newMode;
+function switchAnswerMode(newAnswerMode) {
+    currentAnswerMode = newAnswerMode;
+    userData.currentAnswerMode = newAnswerMode;
     saveData(userData);
 
-    modeHandler = createGameModeHandler(currentMode, {
+    answerModeHandler = createAwnserModeHandler(currentAnswerMode, {
         champions,
         championToday,
         getExcludedItems: getExcludedAttempts
     });
 
-    inputChampionIdElement.placeholder = modeHandler.placeholder;
+    inputChampionIdElement.placeholder = answerModeHandler.placeholder;
     inputChampionIdElement.value = "";
     clearInputButtonElement?.classList.remove("active");
 
@@ -199,7 +185,7 @@ async function loadNextChampion() {
     showLoading("Carregando novo campeão...");
 
     delete userData.championToday;
-    userData.currentMode = GameMode.CHAMPION;
+    userData.currentAnswerMode = AnswerMode.CHAMPION;
     saveData(userData);
 
     championToday = await buildChampionToday();
@@ -221,30 +207,22 @@ async function loadNextChampion() {
     void splashArtImage.offsetHeight;
     splashArtImage.style.transition = "";
 
-    switchMode(GameMode.CHAMPION);
+    switchAnswerMode(AnswerMode.CHAMPION);
     hideLoading();
 }
 
-/**
- * TODO
- * Arquiteturar esse metodo e a logica de autocomplete para ser orientado ao modo que o usuário está.
- * Exemplo: se o usuário está no modo de acertar o campeão, a logica desse método vai comparar o champion today id / name. Se for no modo skin
- * a logica do método vai comparar com o champion today skin name.
- * 
- * Mesmo fluxo para o auto complete do usuário.
- */
 function confirmChampionToday(validGuess) {
     const rawGuess = inputChampionIdElement.value.trim();
     const guess = (typeof validGuess === "string" && validGuess.length > 0)
         ? validGuess
-        : modeHandler.validateGuess(rawGuess);
+        : answerModeHandler.validateGuess(rawGuess);
     if (!guess) return;
 
-    const isCorrect = modeHandler.isCorrect(guess);
-    const displayInfo = modeHandler.getDisplayInfo(guess);
-    const modeAtAttempt = currentMode;
+    const isCorrect = answerModeHandler.isCorrect(guess);
+    const displayInfo = answerModeHandler.getDisplayInfo(guess);
+    const answerModeAtAttempt = currentAnswerMode;
 
-    const attemptCard = createAttemptCard(displayInfo, isCorrect, modeAtAttempt, guess);
+    const attemptCard = createAttemptCard(displayInfo, isCorrect, answerModeAtAttempt, guess);
     attemptsContainerElement.prepend(attemptCard);
 
     inputChampionIdElement.value = "";
@@ -256,19 +234,19 @@ function confirmChampionToday(validGuess) {
         return;
     }
 
-    handleCorrectAttempt(modeAtAttempt, attemptCard);
+    handleCorrectAttempt(answerModeAtAttempt, attemptCard);
 }
 
-function handleCorrectAttempt(modeAtAttempt, attemptCard) {
+function handleCorrectAttempt(answerModeAtAttempt, attemptCard) {
     attemptCard.classList.add("correct");
 
-    if (modeAtAttempt === GameMode.CHAMPION) {
-        switchMode(GameMode.SKIN);
+    if (answerModeAtAttempt === AnswerMode.CHAMPION) {
+        switchAnswerMode(AnswerMode.SKIN);
         openSkinModal();
     }
 }
 
-function createAttemptCard(displayInfo, isCorrect, modeAtAttempt, guess) {
+function createAttemptCard(displayInfo, isCorrect, answerModeAtAttempt, guess) {
     const attemptCard = document.createElement("div");
     attemptCard.classList.add("attempt-card");
     attemptCard.dataset.guessId = guess;
@@ -285,7 +263,7 @@ function createAttemptCard(displayInfo, isCorrect, modeAtAttempt, guess) {
     }
 
     const nameSpan = document.createElement("span");
-    nameSpan.textContent = modeAtAttempt === GameMode.CHAMPION && isCorrect
+    nameSpan.textContent = answerModeAtAttempt === AnswerMode.CHAMPION && isCorrect
         ? `✓ ${displayInfo.label} (Campeão correto! Agora descubra a skin)`
         : displayInfo.label;
 
@@ -355,13 +333,16 @@ async function getChampionToday() {
 
     return getRandomItem(available);
 }
+
 function resetUserState() {
     delete userData.champion;
     saveData(userData);
 }
+
 function getRandomItem(list) {
     return list[Math.floor(Math.random() * list.length)];
 }
+
 // Inicialização Principal da Aplicação
 async function init() {
     try {
@@ -377,7 +358,7 @@ async function init() {
 
         // Aplica o zoom inicial instantaneamente sem transição visível
         splashArtImage.style.transition = "none";
-        splashArtImage.style.transform = currentMode === GameMode.SKIN
+        splashArtImage.style.transform = currentAnswerMode === AnswerMode.SKIN
             ? "scale(1)"
             : `scale(${ZOOM_LEVELS[0]})`;
         splashArtImage.src = championToday.splashArtUrl;
@@ -387,7 +368,7 @@ async function init() {
         userData.championToday = championToday;
         saveData(userData);
 
-        modeHandler = createGameModeHandler(currentMode, {
+        answerModeHandler = createAwnserModeHandler(currentAnswerMode, {
             champions,
             championToday,
             getExcludedItems: getExcludedAttempts
@@ -398,13 +379,14 @@ async function init() {
             inputChampionIdElement,
             clearInputButtonElement,
             autoCompleteContainerElement,
-            getModeHandler: () => modeHandler,
+            getAnswerModeHandler: () => answerModeHandler,
+            getModeHandler: () => answerModeHandler,
             onConfirm: confirmChampionToday
         });
 
         updateSplashZoom();
 
-        if (currentMode === GameMode.SKIN) {
+        if (currentAnswerMode === AnswerMode.SKIN) {
             openSkinModal();
         }
     } catch (err) {
