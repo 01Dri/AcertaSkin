@@ -3,10 +3,10 @@ import { buildChampionSplashArtImage, loadChampions, loadChampionSkins } from ".
 import { setupEvents } from "./events.js";
 import { AnswerMode, GameMode } from "./types.js";
 import { createAwnserModeHandler } from "./awnserMode.js";
+import { getSplashEffect } from "./splashEffects.js";
 import { triggerConfetti } from "./confetti.js";
 
-// Constants
-const ZOOM_LEVELS = [4.0, 3.8, 3.6, 3.4, 3.2, 3.0, 2.8, 2.6, 2.4, 2.2, 2.0, 1.8, 1.6, 1.4, 1.2, 1.0];
+// Audio
 const correctAudio = typeof Audio !== "undefined" ? new Audio("./assets/acertou.mp3") : null;
 
 // DOM Elements
@@ -28,9 +28,9 @@ const skinOptionsContainerElement = document.getElementById("skin-options-contai
 let userData = getData();
 let champions = [];
 let championToday = null;
+let currentGameMode = userData.currentGameMode || GameMode.DEFAULT;
 let currentAnswerMode = userData.currentAnswerMode || AnswerMode.CHAMPION;
 let answerModeHandler = null;
-let userGameMode = userData .currentUserMode || GameMode.DEFAULT;
 
 function showLoading(message = "Carregando campeão...") {
     if (!splashLoadingElement) return;
@@ -66,26 +66,30 @@ function preloadImage(url) {
     });
 }
 
-function generateZoomOrigin() {
-    const xPercent = Math.floor(Math.random() * 15 + 80);
-    const yPercent = Math.floor(Math.random() * 70 + 15);
-    return `${xPercent}% ${yPercent}%`;
-}
-
 function getExcludedAttempts() {
     const wrongCards = attemptsContainerElement.querySelectorAll(".attempt-card.wrong");
     return Array.from(wrongCards).map(card => card.dataset.guessId || "").filter(Boolean);
 }
 
-function updateSplashZoom() {
-    if (currentAnswerMode === AnswerMode.SKIN) {
-        splashArtImage.style.transform = "scale(1)";
-        return;
-    }
+function getWrongAttemptsCount() {
+    return attemptsContainerElement.querySelectorAll(".attempt-card.wrong").length;
+}
 
-    const wrongCount = attemptsContainerElement.querySelectorAll(".attempt-card.wrong").length;
-    const zoomIndex = Math.min(wrongCount, ZOOM_LEVELS.length - 1);
-    splashArtImage.style.transform = `scale(${ZOOM_LEVELS[zoomIndex]})`;
+function updateSplashEffect() {
+    const effect = getSplashEffect(currentGameMode);
+    effect.update(splashArtImage, {
+        wrongCount: getWrongAttemptsCount(),
+        answerMode: currentAnswerMode,
+        championToday
+    });
+}
+
+function applyInitialSplashEffect() {
+    const effect = getSplashEffect(currentGameMode);
+    effect.init(splashArtImage, {
+        championToday,
+        answerMode: currentAnswerMode
+    });
 }
 
 function switchAnswerMode(newAnswerMode) {
@@ -103,7 +107,7 @@ function switchAnswerMode(newAnswerMode) {
     inputChampionIdElement.value = "";
     clearInputButtonElement?.classList.remove("active");
 
-    updateSplashZoom();
+    updateSplashEffect();
     inputChampionIdElement.focus();
 }
 
@@ -194,18 +198,10 @@ async function loadNextChampion() {
 
     await preloadImage(championToday.splashArtUrl);
 
-    // Configura a origem do zoom na direita variando entre cima e baixo
-    splashArtImage.style.transformOrigin = championToday.zoomOrigin || "85% 50%";
-
-    // Aplica o zoom inicial instantaneamente sem animação atrás da tela de loading
-    splashArtImage.style.transition = "none";
-    splashArtImage.style.transform = `scale(${ZOOM_LEVELS[0]})`;
+    // Aplica o efeito inicial da splash art conforme o GameMode ativo
+    applyInitialSplashEffect();
     splashArtImage.src = championToday.splashArtUrl;
     attemptsContainerElement.innerHTML = "";
-
-    // Força reflow e restaura a transição
-    void splashArtImage.offsetHeight;
-    splashArtImage.style.transition = "";
 
     switchAnswerMode(AnswerMode.CHAMPION);
     hideLoading();
@@ -230,7 +226,7 @@ function confirmChampionToday(validGuess) {
 
     if (!isCorrect) {
         attemptCard.classList.add("wrong");
-        updateSplashZoom();
+        updateSplashEffect();
         return;
     }
 
@@ -275,7 +271,7 @@ function createAttemptCard(displayInfo, isCorrect, answerModeAtAttempt, guess) {
     removeBtn.title = "Remover tentativa";
     removeBtn.addEventListener("click", () => {
         attemptCard.remove();
-        updateSplashZoom();
+        updateSplashEffect();
     });
 
     attemptCard.appendChild(infoContainer);
@@ -292,11 +288,6 @@ async function buildChampionToday() {
             userData.championToday = storedChampion;
             saveData(userData);
         }
-        if (!storedChampion.zoomOrigin) {
-            storedChampion.zoomOrigin = generateZoomOrigin();
-            userData.championToday = storedChampion;
-            saveData(userData);
-        }
         return storedChampion;
     }
 
@@ -309,6 +300,9 @@ async function buildChampionToday() {
         championSkinToday.num
     );
 
+    const effect = getSplashEffect(currentGameMode);
+    const initialEffectData = effect.generateInitialData ? effect.generateInitialData() : {};
+
     return {
         id: championObj.id,
         name: championObj.name,
@@ -316,7 +310,7 @@ async function buildChampionToday() {
         splashArtNum: championSkinToday.num,
         splashArtUrl: splashImage,
         allSkins: championSkins,
-        zoomOrigin: generateZoomOrigin()
+        ...initialEffectData
     };
 }
 
@@ -353,17 +347,9 @@ async function init() {
 
         await preloadImage(championToday.splashArtUrl);
 
-        // Aplica o ponto de origem do zoom (sempre na direita, variando entre cima e baixo)
-        splashArtImage.style.transformOrigin = championToday.zoomOrigin || "85% 50%";
-
-        // Aplica o zoom inicial instantaneamente sem transição visível
-        splashArtImage.style.transition = "none";
-        splashArtImage.style.transform = currentAnswerMode === AnswerMode.SKIN
-            ? "scale(1)"
-            : `scale(${ZOOM_LEVELS[0]})`;
+        // Aplica o efeito inicial da splash art com base no GameMode atual
+        applyInitialSplashEffect();
         splashArtImage.src = championToday.splashArtUrl;
-        void splashArtImage.offsetHeight;
-        splashArtImage.style.transition = "";
 
         userData.championToday = championToday;
         saveData(userData);
@@ -384,7 +370,7 @@ async function init() {
             onConfirm: confirmChampionToday
         });
 
-        updateSplashZoom();
+        updateSplashEffect();
 
         if (currentAnswerMode === AnswerMode.SKIN) {
             openSkinModal();
