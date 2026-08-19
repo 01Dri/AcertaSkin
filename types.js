@@ -14,5 +14,4 @@ export const AnswerMode = {
     SKIN: "skin"
 };
 
-// Aliases de compatibilidade
 export const AwnserMode = AnswerMode;

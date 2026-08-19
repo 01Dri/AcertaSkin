@@ -16,50 +16,62 @@
         AcertaSkin
     </div>
 
-    <div id="championSplash-container">
-        <div id="splash-loading" class="spinner-container">
-            <div class="spinner"></div>
-            <span class="loading-text">Carregando campeão...</span>
-        </div>
-        <img
-            id="championSplash"
-            alt="Champion"
-        >
-    </div>
-
-    <div id="champion-input-container">
-
-        <div id="champion-input-wrapper">
-            <input
-                id="champion-input"
-                type="text"
-                placeholder="Digite o nome do campeão"
-                autocomplete="off"
-            >
-            <button id="clear-input-button" type="button" title="Limpar">&times;</button>
-            <div id="auto-complete-champions"></div>
-        </div>
-
-        <button id="confirm-button">
-            Confirmar
+    <div id="modes-container" role="tablist" aria-label="Modos de Jogo">
+        <button id="mode-default-btn" class="mode-button" role="tab" aria-selected="false" data-mode="default">
+            Padrão
         </button>
-
+        <button id="mode-pixel-btn" class="mode-button" role="tab" aria-selected="false" data-mode="pixel">
+            Pixel
+        </button>
     </div>
 
-    <div id="attempts-container"></div>
+    <div id="game-container" class="mode-view hidden">
+        <div id="championSplash-container">
+            <div id="splash-loading" class="spinner-container">
+                <div class="spinner"></div>
+                <span class="loading-text">Carregando campeão...</span>
+            </div>
+            <img
+                id="championSplash"
+                alt="Champion"
+            >
+            <canvas id="championSplashCanvas" class="hidden"></canvas>
+        </div>
 
-    <div id="skin-modal" class="modal-overlay hidden">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="skin-modal-title">Qual é esta skin?</h2>
-                <p id="skin-modal-subtitle">Selecione a skin correta correspondente à splash art</p>
+        <div id="champion-input-container">
+
+            <div id="champion-input-wrapper">
+                <input
+                    id="champion-input"
+                    type="text"
+                    placeholder="Digite o nome do campeão"
+                    autocomplete="off"
+                >
+                <button id="clear-input-button" type="button" title="Limpar">&times;</button>
+                <div id="auto-complete-champions"></div>
             </div>
 
-            <div class="modal-splash-container">
-                <img id="skin-modal-splash" alt="Splash Art da Skin">
-            </div>
+            <button id="confirm-button">
+                Confirmar
+            </button>
 
-            <div id="skin-options-container" class="skin-options-grid"></div>
+        </div>
+
+        <div id="attempts-container"></div>
+
+        <div id="skin-modal" class="modal-overlay hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="skin-modal-title">Qual é esta skin?</h2>
+                    <p id="skin-modal-subtitle">Selecione a skin correta correspondente à splash art</p>
+                </div>
+
+                <div class="modal-splash-container">
+                    <img id="skin-modal-splash" alt="Splash Art da Skin">
+                </div>
+
+                <div id="skin-options-container" class="skin-options-grid"></div>
+            </div>
         </div>
     </div>
 

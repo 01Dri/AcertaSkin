@@ -1,4 +1,4 @@
-import { saveData, getData } from "./user.js";
+import { getUserModeData, saveUserModeData } from "./user.js";
 import { buildChampionSplashArtImage, loadChampions, loadChampionSkins } from "./champions.js";
 import { setupEvents } from "./events.js";
 import { AnswerMode, GameMode } from "./types.js";
@@ -6,11 +6,14 @@ import { createAwnserModeHandler } from "./awnserMode.js";
 import { getSplashEffect } from "./splashEffects.js";
 import { triggerConfetti } from "./confetti.js";
 
-// Audio
 const correctAudio = typeof Audio !== "undefined" ? new Audio("./assets/acertou.mp3") : null;
 
-// DOM Elements
+const modeDefaultBtn = document.getElementById("mode-default-btn");
+const modePixelBtn = document.getElementById("mode-pixel-btn");
+const gameContainerElement = document.getElementById("game-container");
+
 const splashArtImage = document.getElementById("championSplash");
+const splashArtCanvas = document.getElementById("championSplashCanvas");
 const splashLoadingElement = document.getElementById("splash-loading");
 const confirmChampionButtonElement = document.getElementById("confirm-button");
 const inputChampionIdElement = document.getElementById("champion-input");
@@ -18,19 +21,17 @@ const clearInputButtonElement = document.getElementById("clear-input-button");
 const autoCompleteContainerElement = document.getElementById("auto-complete-champions");
 const attemptsContainerElement = document.getElementById("attempts-container");
 
-// Modal Elements
 const skinModalElement = document.getElementById("skin-modal");
 const skinModalSplashElement = document.getElementById("skin-modal-splash");
 const skinModalTitleElement = document.getElementById("skin-modal-title");
 const skinOptionsContainerElement = document.getElementById("skin-options-container");
 
-// State
-let userData = getData();
 let champions = [];
 let championToday = null;
-let currentGameMode = userData.currentGameMode || GameMode.DEFAULT;
-let currentAnswerMode = userData.currentAnswerMode || AnswerMode.CHAMPION;
+let currentGameMode = null;
+let currentAnswerMode = AnswerMode.CHAMPION;
 let answerModeHandler = null;
+let eventsInitialized = false;
 
 function showLoading(message = "Carregando campeão...") {
     if (!splashLoadingElement) return;
@@ -76,26 +77,31 @@ function getWrongAttemptsCount() {
 }
 
 function updateSplashEffect() {
+    if (!currentGameMode) return;
     const effect = getSplashEffect(currentGameMode);
     effect.update(splashArtImage, {
         wrongCount: getWrongAttemptsCount(),
         answerMode: currentAnswerMode,
-        championToday
+        championToday,
+        canvasElement: splashArtCanvas
     });
 }
 
 function applyInitialSplashEffect() {
+    if (!currentGameMode) return;
     const effect = getSplashEffect(currentGameMode);
     effect.init(splashArtImage, {
         championToday,
-        answerMode: currentAnswerMode
+        answerMode: currentAnswerMode,
+        canvasElement: splashArtCanvas
     });
 }
 
 function switchAnswerMode(newAnswerMode) {
     currentAnswerMode = newAnswerMode;
-    userData.currentAnswerMode = newAnswerMode;
-    saveData(userData);
+    const modeData = getUserModeData(currentGameMode);
+    modeData.currentAnswerMode = newAnswerMode;
+    saveUserModeData(currentGameMode, modeData);
 
     answerModeHandler = createAwnserModeHandler(currentAnswerMode, {
         champions,
@@ -103,16 +109,18 @@ function switchAnswerMode(newAnswerMode) {
         getExcludedItems: getExcludedAttempts
     });
 
-    inputChampionIdElement.placeholder = answerModeHandler.placeholder;
-    inputChampionIdElement.value = "";
+    if (inputChampionIdElement) {
+        inputChampionIdElement.placeholder = answerModeHandler.placeholder;
+        inputChampionIdElement.value = "";
+    }
     clearInputButtonElement?.classList.remove("active");
 
     updateSplashEffect();
-    inputChampionIdElement.focus();
+    inputChampionIdElement?.focus();
 }
 
 function openSkinModal() {
-    if (!skinModalElement) return;
+    if (!skinModalElement || !championToday) return;
 
     const champName = championToday?.name || championToday?.id || "Campeão";
     skinModalSplashElement.src = championToday.splashArtUrl;
@@ -155,25 +163,24 @@ function handleSkinSelection(skin, clickedButton) {
 
     clickedButton.classList.add("correct");
 
-    // Desativa todos os botões
     const allButtons = skinOptionsContainerElement.querySelectorAll(".skin-option-btn");
     allButtons.forEach(btn => {
         btn.disabled = true;
     });
 
-    // Celebração de vitória com confetes e áudio
     triggerConfetti();
     playCorrectAudio();
 
     try {
-        userData.champions ??= [];
-        userData.champions.push({
+        const modeData = getUserModeData(currentGameMode);
+        modeData.champions ??= [];
+        modeData.champions.push({
             id: championToday.id,
             name: championToday.name,
             skinName: championToday.skinName,
             completedAt: new Date().toISOString()
         });
-        saveData(userData);
+        saveUserModeData(currentGameMode, modeData);
     } catch (e) {
         console.log(e);
     }
@@ -188,17 +195,18 @@ async function loadNextChampion() {
     closeSkinModal();
     showLoading("Carregando novo campeão...");
 
-    delete userData.championToday;
-    userData.currentAnswerMode = AnswerMode.CHAMPION;
-    saveData(userData);
+    const modeData = getUserModeData(currentGameMode);
+    delete modeData.championToday;
+    modeData.currentAnswerMode = AnswerMode.CHAMPION;
+    currentAnswerMode = AnswerMode.CHAMPION;
+    saveUserModeData(currentGameMode, modeData);
 
-    championToday = await buildChampionToday();
-    userData.championToday = championToday;
-    saveData(userData);
+    championToday = await buildChampionToday(currentGameMode);
+    modeData.championToday = championToday;
+    saveUserModeData(currentGameMode, modeData);
 
     await preloadImage(championToday.splashArtUrl);
 
-    // Aplica o efeito inicial da splash art conforme o GameMode ativo
     applyInitialSplashEffect();
     splashArtImage.src = championToday.splashArtUrl;
     attemptsContainerElement.innerHTML = "";
@@ -280,18 +288,19 @@ function createAttemptCard(displayInfo, isCorrect, answerModeAtAttempt, guess) {
     return attemptCard;
 }
 
-async function buildChampionToday() {
-    const storedChampion = userData?.championToday;
+async function buildChampionToday(gameMode = currentGameMode) {
+    const modeData = getUserModeData(gameMode);
+    const storedChampion = modeData?.championToday;
     if (storedChampion) {
         if (!storedChampion.allSkins?.length) {
             storedChampion.allSkins = await loadChampionSkins(storedChampion.id);
-            userData.championToday = storedChampion;
-            saveData(userData);
+            modeData.championToday = storedChampion;
+            saveUserModeData(gameMode, modeData);
         }
         return storedChampion;
     }
 
-    const championObj = await getChampionToday();
+    const championObj = await getChampionToday(gameMode);
     const championSkins = await loadChampionSkins(championObj.id);
     const championSkinToday = championSkins[Math.floor(Math.random() * championSkins.length)];
 
@@ -300,10 +309,10 @@ async function buildChampionToday() {
         championSkinToday.num
     );
 
-    const effect = getSplashEffect(currentGameMode);
+    const effect = getSplashEffect(gameMode);
     const initialEffectData = effect.generateInitialData ? effect.generateInitialData() : {};
 
-    return {
+    const newChampion = {
         id: championObj.id,
         name: championObj.name,
         skinName: championSkinToday.name,
@@ -312,47 +321,54 @@ async function buildChampionToday() {
         allSkins: championSkins,
         ...initialEffectData
     };
+
+    modeData.championToday = newChampion;
+    saveUserModeData(gameMode, modeData);
+    return newChampion;
 }
 
-async function getChampionToday() {
-    const usedIds = userData?.champions?.map(x => x.id) ?? [];
+async function getChampionToday(gameMode = currentGameMode) {
+    const modeData = getUserModeData(gameMode);
+    const usedIds = modeData?.champions?.map(x => x.id) ?? [];
     if (usedIds.length === 0) {
         return getRandomItem(champions);
     }
 
     const available = champions.filter(champ => !usedIds.includes(champ.id) && !usedIds.includes(champ.name));
     if (available.length === 0) {
-        resetUserState();
+        resetModeState(gameMode);
+        return getRandomItem(champions);
     }
 
     return getRandomItem(available);
 }
 
-function resetUserState() {
-    delete userData.champion;
-    saveData(userData);
+function resetModeState(gameMode = currentGameMode) {
+    const modeData = getUserModeData(gameMode);
+    modeData.champions = [];
+    saveUserModeData(gameMode, modeData);
 }
 
 function getRandomItem(list) {
     return list[Math.floor(Math.random() * list.length)];
 }
 
-// Inicialização Principal da Aplicação
-async function init() {
+async function loadGameMode(gameMode) {
     try {
         showLoading("Carregando campeão...");
 
-        champions = await loadChampions();
-        championToday = await buildChampionToday();
+        if (!champions || champions.length === 0) {
+            champions = await loadChampions();
+        }
 
+        const modeData = getUserModeData(gameMode);
+        currentAnswerMode = modeData.currentAnswerMode || AnswerMode.CHAMPION;
+
+        championToday = await buildChampionToday(gameMode);
         await preloadImage(championToday.splashArtUrl);
 
-        // Aplica o efeito inicial da splash art com base no GameMode atual
         applyInitialSplashEffect();
         splashArtImage.src = championToday.splashArtUrl;
-
-        userData.championToday = championToday;
-        saveData(userData);
 
         answerModeHandler = createAwnserModeHandler(currentAnswerMode, {
             champions,
@@ -360,25 +376,83 @@ async function init() {
             getExcludedItems: getExcludedAttempts
         });
 
-        setupEvents({
-            confirmChampionButtonElement,
-            inputChampionIdElement,
-            clearInputButtonElement,
-            autoCompleteContainerElement,
-            getAnswerModeHandler: () => answerModeHandler,
-            getModeHandler: () => answerModeHandler,
-            onConfirm: confirmChampionToday
-        });
+        if (inputChampionIdElement) {
+            inputChampionIdElement.placeholder = answerModeHandler.placeholder;
+        }
 
         updateSplashEffect();
 
         if (currentAnswerMode === AnswerMode.SKIN) {
             openSkinModal();
+        } else {
+            closeSkinModal();
+        }
+    } catch (err) {
+        console.error(`Erro ao carregar modo ${gameMode}:`, err);
+    } finally {
+        hideLoading();
+    }
+}
+
+async function selectGameMode(selectedMode) {
+    if (currentGameMode) {
+        const prevEffect = getSplashEffect(currentGameMode);
+        prevEffect.cleanup(splashArtImage, splashArtCanvas);
+    }
+
+    currentGameMode = selectedMode;
+
+    if (selectedMode === GameMode.DEFAULT) {
+        modeDefaultBtn?.classList.add("active");
+        modeDefaultBtn?.setAttribute("aria-selected", "true");
+        modePixelBtn?.classList.remove("active");
+        modePixelBtn?.setAttribute("aria-selected", "false");
+    } else if (selectedMode === GameMode.PIXEL) {
+        modePixelBtn?.classList.add("active");
+        modePixelBtn?.setAttribute("aria-selected", "true");
+        modeDefaultBtn?.classList.remove("active");
+        modeDefaultBtn?.setAttribute("aria-selected", "false");
+    }
+
+    gameContainerElement?.classList.remove("hidden");
+    attemptsContainerElement.innerHTML = "";
+    await loadGameMode(selectedMode);
+}
+
+function setupModeButtons() {
+    modeDefaultBtn?.addEventListener("click", () => {
+        selectGameMode(GameMode.DEFAULT);
+    });
+
+    modePixelBtn?.addEventListener("click", () => {
+        selectGameMode(GameMode.PIXEL);
+    });
+}
+
+async function init() {
+    try {
+        setupModeButtons();
+
+        loadChampions().then(loadedChampions => {
+            champions = loadedChampions;
+        }).catch(err => {
+            console.error("Erro ao carregar lista de campeões:", err);
+        });
+
+        if (!eventsInitialized) {
+            setupEvents({
+                confirmChampionButtonElement,
+                inputChampionIdElement,
+                clearInputButtonElement,
+                autoCompleteContainerElement,
+                getAnswerModeHandler: () => answerModeHandler,
+                getModeHandler: () => answerModeHandler,
+                onConfirm: confirmChampionToday
+            });
+            eventsInitialized = true;
         }
     } catch (err) {
         console.error("Erro na inicialização:", err);
-    } finally {
-        hideLoading();
     }
 }
 
