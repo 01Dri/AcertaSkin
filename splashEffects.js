@@ -68,7 +68,7 @@ export const zoomSplashEffect = {
 
 export const pixelSplashEffect = {
     name: "pixel",
-    pixelLevels: [16, 22, 30, 42, 58, 80, 110, 160, 240, 400],
+    pixelLevels: [30, 42, 58, 80, 110, 160, 240, 400],
 
     generateInitialData() {
         return {};
